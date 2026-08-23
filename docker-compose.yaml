@@ -13,9 +13,9 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp
+    # Deliberately no read_only: true — undetected_chromedriver writes to
+    # /app/.local and Chrome itself needs additional write paths. Same
+    # posture as the browser sidecar: write surface too broad to enumerate.
     mem_limit: 1g
     cpus: 1.0
     pids_limit: 300

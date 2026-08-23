@@ -13,15 +13,15 @@ services:
     restart: unless-stopped
     # Security hardening (OWASP Docker Security Cheat Sheet). Unlike the browser
     # sidecar, FlareSolverr is a lean Python HTTP server — no s6-overlay privilege-drop
-    # dance, so cap_drop: ALL works clean without any cap_add. read_only: true is safe
-    # here too: the only write path Chrome needs is /tmp, which is tmpfs-mounted.
+    # dance, so cap_drop: ALL works clean without any cap_add.
+    # Deliberately no read_only: true — undetected_chromedriver writes to
+    # /app/.local and Chrome itself needs additional write paths (confirmed
+    # by CI smoke test failure). Same posture as the browser sidecar: write
+    # surface too broad to enumerate without another crash-loop discovery cycle.
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    read_only: true
-    tmpfs:
-      - /tmp
     mem_limit: 1g
     cpus: 1.0
     pids_limit: 300

@@ -19,15 +19,18 @@ network can submit URLs for challenge solving. Docker network membership is the 
 today. Accepted as a bounded risk: every container in this fleet is first-party and curated,
 not arbitrary/untrusted code. Revisit if that ever changes.
 
-## Security hardening — simpler than `browser`
+## Security hardening — simpler than `browser` in one way, same in another
 
 Unlike the `browser` sidecar (which needs `cap_add: [CHOWN, FOWNER, DAC_OVERRIDE, SETUID,
 SETGID]` for its s6-overlay privilege-drop entrypoint), FlareSolverr is a plain Python HTTP
 server. `cap_drop: ALL` works clean with zero `cap_add`.
 
-`read_only: true` is also safe here — FlareSolverr is stateless. Chrome's internal write
-needs go to `/tmp`, which is tmpfs-mounted. Same reasoning does NOT apply to the `browser`
-sidecar, which runs a full desktop environment with a write surface too broad to enumerate.
+**Deliberately no `read_only: true`** — despite being "just" a Python HTTP server,
+FlareSolverr bundles undetected_chromedriver which writes to `/app/.local` at startup
+(`Patcher.__init__` → `os.makedirs(self.data_path)`), and Chrome itself needs additional
+write paths. Confirmed by CI smoke test failure: `OSError: [Errno 30] Read-only file system:
+'/app/.local'`. Same posture and same reasoning as the `browser` sidecar: write surface too
+broad to safely enumerate without another crash-loop discovery cycle.
 
 ## The `latest` tag is Renovate-managed, not careless
 
