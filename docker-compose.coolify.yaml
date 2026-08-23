@@ -1,0 +1,45 @@
+# Deployed by Coolify as this repo's docker_compose_location. Shared fleet service — never
+# gets a public domain (docker_compose_domains suppressed, see README). Joins the external
+# `coolify` network so other tenant apps (job-digest, etc.) can reach it by service name
+# (`flaresolverr`) at http://flaresolverr:8191.
+services:
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    environment:
+      LOG_LEVEL: info
+      TZ: Etc/UTC
+    networks:
+      - coolify
+    restart: unless-stopped
+    # Security hardening (OWASP Docker Security Cheat Sheet). Unlike the browser
+    # sidecar, FlareSolverr is a lean Python HTTP server — no s6-overlay privilege-drop
+    # dance, so cap_drop: ALL works clean without any cap_add. read_only: true is safe
+    # here too: the only write path Chrome needs is /tmp, which is tmpfs-mounted.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 1g
+    cpus: 1.0
+    pids_limit: 300
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # FlareSolverr exposes a dedicated GET /health endpoint (confirmed in source:
+    # src/flaresolverr.py's @app.route('/health')). Lightweight — no browser challenge
+    # involved, just an HTTP liveness check.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8191/health -o /dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+networks:
+  coolify:
+    external: true
